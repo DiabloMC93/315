@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación HDA - Midnight Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+        body {
+            background-color: #020617;
+            color: #e2e8f0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .option-btn {
+            transition: all 0.2s ease;
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: #8b5cf6;
+        }
+
+        .correct {
+            background: rgba(16, 185, 129, 0.1) !important;
+            border-color: #10b981 !important;
+            color: #34d399 !important;
+        }
+
+        .incorrect {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-color: #ef4444 !important;
+            color: #f87171 !important;
+        }
+
+        .correct span:first-child {
+            background: #10b981;
+            color: #020617;
+        }
+
+        .incorrect span:first-child {
+            background: #ef4444;
+            color: white;
+        }
+
+        .progress-glow {
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Ajuste para evitar scroll */
+        .page-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-950">
+
+    <div class="page-wrapper w-full max-w-xl mx-auto">
+        <!-- Header con Estadísticas (Más compacto) -->
+        <div class="glass-panel rounded-2xl p-4 mb-4 shadow-xl">
+            <div class="flex justify-between items-center gap-4 mb-3">
+                <div>
+                    <h1 class="text-lg font-bold bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
+                        HDA: Cuidados Críticos
+                    </h1>
+                    <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest" id="progress-label">Pregunta 1 de 33</p>
+                </div>
+                
+                <div class="flex items-center gap-3 bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+                    <div class="text-center">
+                        <span class="text-emerald-400 font-bold" id="hits">0</span>
+                        <span class="text-[9px] text-slate-500 uppercase ml-1">OK</span>
+                    </div>
+                    <div class="w-px h-4 bg-slate-800"></div>
+                    <div class="text-center">
+                        <span class="text-rose-400 font-bold" id="misses">0</span>
+                        <span class="text-[9px] text-slate-500 uppercase ml-1">Err</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="relative h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-blue-600 to-violet-600 transition-all duration-700 ease-out progress-glow" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Tarjeta de Pregunta (Altura optimizada) -->
+        <div id="quiz-card" class="glass-panel rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
+            <div class="p-6">
+                <div id="question-container" class="min-h-[60px] flex items-center mb-4">
+                    <h2 id="question-text" class="text-base md:text-lg font-medium leading-snug text-slate-100"></h2>
+                </div>
+                
+                <div id="options-container" class="space-y-2">
+                    <!-- Opciones compactas -->
+                </div>
+            </div>
+            
+            <div class="bg-slate-900/40 p-4 flex justify-between items-center border-t border-slate-800/50">
+                <div id="feedback-message" class="text-[10px] font-bold tracking-wider uppercase"></div>
+                <button id="next-btn" onclick="next()" class="hidden bg-indigo-600 hover:bg-indigo-50 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all shadow-lg">
+                    Siguiente
+                </button>
+            </div>
+        </div>
+
+        <!-- Resultados Finales -->
+        <div id="result-card" class="hidden glass-panel rounded-3xl p-8 text-center border border-indigo-500/30">
+            <div class="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-extrabold text-white mb-2 italic">¡Finalizado!</h2>
+            
+            <div class="grid grid-cols-2 gap-4 my-6">
+                <div class="p-4 bg-slate-900/50 rounded-2xl border border-slate-800">
+                    <p class="text-3xl font-black text-emerald-400" id="final-hits">0</p>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Aciertos</p>
+                </div>
+                <div class="p-4 bg-slate-900/50 rounded-2xl border border-slate-800">
+                    <p class="text-3xl font-black text-rose-400" id="final-misses">0</p>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Errores</p>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="w-full bg-slate-100 text-slate-900 py-3 rounded-2xl font-black text-sm hover:bg-white transition-all shadow-xl">
+                REINTENTAR
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            { q: "1. Con respecto a la fisiopatología de la HDA, cuando la hemorragia es superior a 500 cc, se produce:", o: ["Llenado completo de las cavidades ventriculares", "Perfusión insuficiente de los tejidos", "El volumen de eyección no varía", "Aumento del retorno venoso"], a: 1 },
+            { q: "2. Con respecto a la fisiopatología de la HDA, para que haya un descenso de la T.A. ¿Qué porcentaje de volumen intravascular se debe perder?", o: ["Entre 45-55%", "Entre 15-25%", "Mayor a un 70%", "Menor a un 15%"], a: 1 },
+            { q: "3. En una HDA, los cuidados de enfermería irán encaminados a:", o: ["Restablecer la perfusión y oxigenación", "Reponer la volemia y los componentes hemáticos", "Disminuir la ansiedad y comodidad", "Todas las anteriores."], a: 3 },
+            { q: "4. ¿Qué factor de riesgo no pertenece a la hemorragia digestiva alta?", o: ["Edad", "Sexo femenino", "Consumo de café", "Antecedentes de ingestión de alcohol"], a: 1 },
+            { q: "5. Con respecto a las medidas generales en el tratamiento de la HDA, señale la incorrecta:", o: ["Valoración de los signos vitales.", "Evitar soluciones coloides.", "Evaluación física inicial.", "Control hemodinámico."], a: 1 },
+            { q: "6. ¿Cuál es la principal herramienta diagnóstica y terapéutica?", o: ["Cirugía", "Angiografía", "Endoscopia precoz", "Todas son correctas"], a: 2 },
+            { q: "7. ¿Cuáles de las siguientes intervenciones enfermeras se realizarán en la HDA?", o: ["Manejo de la hipovolemia.", "Manejo del dolor.", "Manejo del vómito.", "Todas son correctas."], a: 3 },
+            { q: "8. El manejo en urgencias de la HDA tiene como objetivo/s:", o: ["Cuantificar volumen, controlarlo e identificar causas.", "Controlar el sangrado y muestras para estudio.", "Controlar el sangrado únicamente.", "Cuantificar, identificar causas y tomar medidas."], a: 0 },
+            { q: "9. Se define hemorragia digestiva alta como:", o: ["Desde el estómago hasta el intestino grueso", "En el tercio superior del tronco", "Desde el esófago hasta el ángulo de Treitz", "Expulsión de sangre digestiva"], a: 2 },
+            { q: "10. La sonda Sengstaken-Blakemore se usa para:", o: ["Comprimir las varices esofágicas sangrantes", "Disminuir flujo de venas colaterales", "Control del sangrado", "Todas son correctas"], a: 3 },
+            { q: "11. La Hemorragia produce:", o: ["Hipovolemia", "Hipertensión", "Activación del sistema RAA", "a y c son correctas"], a: 3 },
+            { q: "12. Los principales factores de riesgo en HDA son:", o: ["AINEs, tabaco y radiación", "Edad y sedentarismo", "Drogas y alcohol", "AINEs, anticoagulantes, H. pylori, edad y alcohol."], a: 3 },
+            { q: "13. Los niveles elevados de urea plasmática en la HDA se deben a:", o: ["Aumento del peristaltismo", "Disminución del peristaltismo", "Efecto secundario al tratamiento", "Alteración de la mucosa gástrica"], a: 0 },
+            { q: "14. Paciente con hematemesis, pálido, FC 110, TA 98. ¿Qué acción NO realizaría?", o: ["Oxigenoterapia", "Colocar sonda nasogástrica", "Usar hematocrito como índice inicial de pérdida", "Reponer volemia"], a: 2 },
+            { q: "15. La HDA se manifiesta por:", o: ["Bradicardia e hipertensión", "Disnea, síncope o angor", "Hematemesis/melenas con signos de shock", "Fiebre y escalofríos"], a: 2 },
+            { q: "16. Principales procedimientos diagnósticos en HDA:", o: ["Anamnesis y exploración física", "Colonoscopia", "TAC y Rx abdominal", "Anamnesis, analítica, endoscopia y SNG"], a: 3 },
+            { q: "17. Dentro de las causas de la HDA NO se encuentra:", o: ["Varices esofágicas", "Prolapso de la mucosa gástrica", "Pólipos", "Colitis ulcerosa"], a: 3 },
+            { q: "18. El Helicobacter pylori se diagnostica mediante:", o: ["Test del aliento", "Biopsia endoscópica", "Serología", "Todas son correctas"], a: 3 },
+            { q: "19. ¿En qué caso NO está indicada la SNG en HDA?", o: ["Aspiración de sangre y coágulos", "Localización de sangrado con melenas", "Localización de sangrado con hematemesis", "Localización de sangrado sin hematemesis"], a: 2 },
+            { q: "20. Las manifestaciones clínicas de la HDA son:", o: ["Hemoptisis", "Hematemesis y melenas", "Hemoptisis y melenas", "Bradicardia"], a: 1 },
+            { q: "21. El suero para lavar esófago y estómago se encuentra a temperatura:", o: ["Igual que la corporal", "Fría", "Caliente", "Ninguna"], a: 1 },
+            { q: "22. El suero frío para lavar en HDA producirá:", o: ["Aumento del tiempo de protrombina", "Disminución del tiempo de protrombina", "Nada", "Broncoespasmo"], a: 0 },
+            { q: "23. La HDA más frecuente es la de causa:", o: ["Vascular", "Neoplásica", "Inflamatoria", "Mecánica"], a: 2 },
+            { q: "24. ¿Cuándo debe realizarse laparotomía?", o: ["Nunca", "Si no es por hipertensión portal", "Si es masiva o falla endoscopia/arteriografía", "B y C"], a: 2 },
+            { q: "25. La sonda nasogástrica es útil para:", o: ["Paso de la alimentación", "Localizar origen en pacientes con melenas", "Prevención", "No es eficaz"], a: 1 },
+            { q: "26. La hematemesis indica que:", o: ["El sangrado es proximal al ligamento de Treitz", "No existe relación", "El sangrado es masivo", "El sangrado es distal al ligamento"], a: 0 },
+            { q: "27. Es necesario en pacientes con HDA:", o: ["Vía periférica pequeña", "Vía de grueso calibre o central", "Oxigenoterapia", "Ninguna"], a: 1 },
+            { q: "28. Para endoscopia, el paciente requiere:", o: ["Dieta líquida", "Dieta hiperproteica", "Dieta absoluta", "Dieta hipocalórica"], a: 2 },
+            { q: "29. ¿Causa más frecuente de HDA?", o: ["Varices esofágicas.", "Angiodisplasias.", "Esofagitis.", "Gastritis."], a: 3 },
+            { q: "30. Entre las manifestaciones clínicas de HDA:", o: ["Hematemesis.", "Deposiciones melénicas.", "Rectorragia.", "A y b son correctas."], a: 3 },
+            { q: "31. ¿Cuál no es un factor de riesgo?", o: ["Ingesta de café.", "Ingesta AINEs.", "Celiaquía.", "Consumo alcohol."], a: 2 },
+            { q: "32. Se considera HDA cuando hay extravasación entre:", o: ["Ángulo de Treitz y estómago", "Esófago y ángulo de Treitz", "Ambas", "Ninguna"], a: 1 },
+            { q: "33. Clasificación hemodinámica leve:", o: ["TAS > 100 mmHg.", "FC < 100 lpm.", "Piel seca y normal.", "Todas son correctas."], a: 3 }
+        ];
+
+        let currentIdx = 0;
+        let hits = 0;
+        let misses = 0;
+        let answered = false;
+
+        function render() {
+            answered = false;
+            const item = quizData[currentIdx];
+            document.getElementById('question-text').textContent = item.q;
+            document.getElementById('feedback-message').textContent = "";
+            document.getElementById('next-btn').classList.add('hidden');
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            item.o.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-3 rounded-xl flex items-center gap-4 text-slate-300";
+                btn.innerHTML = `
+                    <span class="w-6 h-6 rounded-md bg-indigo-500/20 flex-shrink-0 flex items-center justify-center font-bold text-indigo-400 text-[10px]">${String.fromCharCode(65 + i)}</span>
+                    <span class="font-medium text-[13px] leading-tight">${opt}</span>
+                `;
+                btn.onclick = () => select(i, btn);
+                container.appendChild(btn);
+            });
+            updateHeader();
+        }
+
+        function select(idx, btn) {
+            if (answered) return;
+            answered = true;
+            const correct = quizData[currentIdx].a;
+            const btns = document.querySelectorAll('.option-btn');
+
+            if (idx === correct) {
+                hits++;
+                btn.classList.add('correct');
+                document.getElementById('feedback-message').innerHTML = "<span class='text-emerald-400'>¡Correcto!</span>";
+            } else {
+                misses++;
+                btn.classList.add('incorrect');
+                btns[correct].classList.add('correct');
+                document.getElementById('feedback-message').innerHTML = "<span class='text-rose-400'>Revisar</span>";
+            }
+
+            btns.forEach(b => b.disabled = true);
+            document.getElementById('next-btn').classList.remove('hidden');
+            updateHeader();
+        }
+
+        function updateHeader() {
+            document.getElementById('hits').textContent = hits;
+            document.getElementById('misses').textContent = misses;
+            document.getElementById('progress-label').textContent = `Pregunta ${currentIdx + 1} de ${quizData.length}`;
+            const progress = ((currentIdx + 1) / quizData.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function next() {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                render();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-card').classList.add('hidden');
+            document.getElementById('result-card').classList.remove('hidden');
+            document.getElementById('final-hits').textContent = hits;
+            document.getElementById('final-misses').textContent = misses;
+        }
+
+        window.onload = render;
+    </script>
+</body>
+</html>
